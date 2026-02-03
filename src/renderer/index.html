@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>AI Check Recorder</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- メイン画面 -->
+    <div id="main-screen" class="screen active">
+      <header class="header">
+        <h1>AI Check Recorder</h1>
+        <p class="subtitle" id="project-name">読み込み中...</p>
+      </header>
+
+      <div class="status-card">
+        <div class="status-indicator" id="status-indicator">
+          <span class="pulse"></span>
+          <span class="status-text" id="status-text">記録中</span>
+        </div>
+        <p class="subject-name" id="subject-name"></p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-value" id="stat-screenshots">0</span>
+          <span class="stat-label">スクリーンショット</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-time">0分</span>
+          <span class="stat-label">記録時間</span>
+        </div>
+      </div>
+
+      <div class="app-usage" id="app-usage">
+        <h3>アプリ使用状況</h3>
+        <div class="usage-list" id="usage-list">
+          <!-- 動的に追加 -->
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btn-pause" class="btn btn-secondary">
+          一時停止
+        </button>
+        <button id="btn-finish" class="btn btn-primary">
+          記録を終了して送信
+        </button>
+      </div>
+    </div>
+
+    <!-- アップロード画面 -->
+    <div id="upload-screen" class="screen">
+      <header class="header">
+        <h1>データを送信</h1>
+        <p class="subtitle">記録が完了しました</p>
+      </header>
+
+      <div class="upload-summary">
+        <div class="summary-item">
+          <span class="summary-label">記録期間</span>
+          <span class="summary-value" id="summary-period">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">スクリーンショット数</span>
+          <span class="summary-value" id="summary-screenshots">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">合計記録時間</span>
+          <span class="summary-value" id="summary-time">-</span>
+        </div>
+      </div>
+
+      <div class="upload-preview">
+        <h3>スクリーンショットプレビュー</h3>
+        <p class="preview-note">不要なスクリーンショットはクリックで削除できます</p>
+        <div class="preview-grid" id="preview-grid">
+          <!-- 動的に追加 -->
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btn-upload" class="btn btn-primary btn-large">
+          送信する
+        </button>
+      </div>
+
+      <div class="upload-progress" id="upload-progress" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-text" id="progress-text">送信中...</p>
+      </div>
+    </div>
+
+    <!-- 完了画面 -->
+    <div id="complete-screen" class="screen">
+      <div class="complete-content">
+        <div class="complete-icon">✓</div>
+        <h1>送信完了</h1>
+        <p>ご協力ありがとうございました。</p>
+        <p class="complete-note">このアプリは閉じていただいて構いません。</p>
+        <button id="btn-close" class="btn btn-primary">
+          アプリを終了
+        </button>
+      </div>
+    </div>
+
+    <!-- エラー画面 -->
+    <div id="error-screen" class="screen">
+      <div class="error-content">
+        <div class="error-icon">!</div>
+        <h1>送信に失敗しました</h1>
+        <p id="error-message">エラーが発生しました。</p>
+        <button id="btn-retry" class="btn btn-primary">
+          再試行
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
