@@ -115,6 +115,11 @@ function createWindow() {
     event.preventDefault()
     mainWindow?.hide()
   })
+
+  mainWindow.on('closed', () => {
+    // 破棄されたら参照を外す（再起動時などの "Object has been destroyed" を防ぐ）
+    mainWindow = null
+  })
 }
 
 function createTray() {
@@ -138,6 +143,9 @@ function createTray() {
   updateTrayMenu()
 
   tray.on('click', () => {
+    if (mainWindow === null || mainWindow.isDestroyed()) {
+      createWindow()
+    }
     mainWindow?.show()
   })
 }
@@ -160,13 +168,18 @@ function updateTrayMenu() {
           recorder?.resume()
         }
         updateTrayMenu()
-        mainWindow?.webContents.send('recording-status', recorder?.isRecording())
+        if (mainWindow !== null && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('recording-status', recorder?.isRecording())
+        }
       },
     },
     { type: 'separator' },
     {
       label: '記録を終了して送信',
       click: async () => {
+        if (mainWindow === null || mainWindow.isDestroyed()) {
+          createWindow()
+        }
         mainWindow?.show()
         mainWindow?.webContents.send('show-upload-screen')
       },
@@ -499,7 +512,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('activate', () => {
-  if (mainWindow === null) {
+  if (mainWindow === null || mainWindow.isDestroyed()) {
     createWindow()
   } else {
     mainWindow.show()
