@@ -9,7 +9,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { Recorder } from './recorder'
 import { Uploader } from './uploader'
-import { loadConfig, saveConfig, fetchConfigFromApi, Config } from './config'
+import { loadConfig, saveConfig, fetchConfigFromApi, deleteUserConfig, Config } from './config'
 
 // === 画面収録権限チェック ===
 async function checkScreenRecordingPermission(): Promise<boolean> {
@@ -169,6 +169,25 @@ function updateTrayMenu() {
       click: async () => {
         mainWindow?.show()
         mainWindow?.webContents.send('show-upload-screen')
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'トークン再設定',
+      click: async () => {
+        const result = await dialog.showMessageBox({
+          type: 'question',
+          title: 'トークン再設定',
+          message: '招待トークンを再入力しますか？',
+          detail: 'アプリが再起動し、トークン入力画面が表示されます。別の対象者で記録する場合に使います。',
+          buttons: ['キャンセル', '再設定する'],
+          defaultId: 0,
+        })
+        if (result.response === 1) {
+          deleteUserConfig()
+          app.relaunch()
+          app.exit(0)
+        }
       },
     },
     { type: 'separator' },

@@ -6,6 +6,9 @@ cd "$(dirname "$0")/.."
 REPO="${GITHUB_REPO:-Diji-Ken/ai-check-recorder}"
 VERSION="${1:-v$(node -p "require('./package.json').version")}"
 
+# electron-builder の GitHub 自動公開を抑止（ZIP はこのスクリプトでアップロードする）
+export CI=false
+
 echo "==> ビルド (Mac arm64, Windows)..."
 npm run build
 npm run dist:mac   # arm64 を優先で生成

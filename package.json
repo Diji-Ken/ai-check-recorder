@@ -42,14 +42,7 @@
     },
     "files": [
       "dist/**/*",
-      "renderer-dist/**/*",
-      "config.json"
-    ],
-    "extraResources": [
-      {
-        "from": "config.json",
-        "to": "config.json"
-      }
+      "renderer-dist/**/*"
     ],
     "win": {
       "target": [

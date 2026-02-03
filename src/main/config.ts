@@ -21,12 +21,18 @@ export interface Config {
 
 // 設定ファイルのパスを取得
 function getConfigPaths(): string[] {
+  // ユーザーデータフォルダ（初回設定後に保存）
+  const userConfig = path.join(app.getPath('userData'), 'config.json')
+
+  // パッケージ版はユーザーデータのみ参照（同梱configによる誤設定を防ぐ）
+  if (app.isPackaged) {
+    return [userConfig]
+  }
+
+  // 開発モードはプロジェクトルートも参照
   return [
-    // ユーザーデータフォルダ（初回設定後に保存）
-    path.join(app.getPath('userData'), 'config.json'),
-    // パッケージ済みアプリの場合（同梱されたconfig.json）
+    userConfig,
     path.join(process.resourcesPath || '', 'config.json'),
-    // 開発モードの場合（プロジェクトルート）
     path.join(__dirname, '..', '..', '..', 'config.json'),
     path.join(__dirname, '..', '..', 'config.json'),
     path.join(process.cwd(), 'config.json'),
@@ -57,6 +63,15 @@ export function saveConfig(config: Config): void {
   const configPath = path.join(app.getPath('userData'), 'config.json')
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
   console.log('Config saved to:', configPath)
+}
+
+// ユーザーデータの config を削除（トークン再設定用）
+export function deleteUserConfig(): void {
+  const configPath = path.join(app.getPath('userData'), 'config.json')
+  if (fs.existsSync(configPath)) {
+    fs.unlinkSync(configPath)
+    console.log('User config deleted:', configPath)
+  }
 }
 
 // APIから設定を取得（トークンベース）
