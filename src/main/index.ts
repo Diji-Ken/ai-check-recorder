@@ -89,6 +89,104 @@ let config: Config | null = null
 
 const isDev = process.env.NODE_ENV === 'development'
 
+async function promptForToken(): Promise<string | null> {
+  return await new Promise((resolve) => {
+    let resolved = false
+    const promptWindow = new BrowserWindow({
+      width: 520,
+      height: 260,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      show: true,
+      alwaysOnTop: true,
+      title: '招待トークン入力',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    })
+
+    const html = `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:;">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; }
+    h1 { font-size: 16px; margin: 0 0 8px; }
+    p { margin: 0 0 12px; color: #555; font-size: 13px; line-height: 1.4; }
+    input { width: 100%; padding: 10px; font-size: 14px; box-sizing: border-box; }
+    .error { color: #c00; font-size: 12px; min-height: 16px; margin-top: 6px; }
+    .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    button { padding: 8px 14px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>招待トークンを入力してください</h1>
+  <p>招待ページのURL末尾の文字列を入力してください。<br>例: abc123-yamada-taro</p>
+  <input id="token" type="text" placeholder="例: abc123-yamada-taro" />
+  <div id="error" class="error"></div>
+  <div class="actions">
+    <button id="cancel">キャンセル</button>
+    <button id="ok">OK</button>
+  </div>
+  <script>
+    const { ipcRenderer, clipboard } = require('electron');
+    const input = document.getElementById('token');
+    const error = document.getElementById('error');
+    const pref = (clipboard.readText() || '').trim();
+    if (pref) {
+      input.value = pref;
+      input.select();
+    } else {
+      input.focus();
+    }
+    function submit() {
+      const value = (input.value || '').trim();
+      if (!value) {
+        error.textContent = 'トークンを入力してください';
+        input.focus();
+        return;
+      }
+      ipcRenderer.send('token-prompt-submit', value);
+    }
+    document.getElementById('ok').addEventListener('click', submit);
+    document.getElementById('cancel').addEventListener('click', () => ipcRenderer.send('token-prompt-cancel'));
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  </script>
+</body>
+</html>`
+
+    promptWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+
+    const cleanup = () => {
+      if (resolved) return
+      resolved = true
+      ipcMain.removeAllListeners('token-prompt-submit')
+      ipcMain.removeAllListeners('token-prompt-cancel')
+      if (!promptWindow.isDestroyed()) {
+        promptWindow.close()
+      }
+    }
+
+    ipcMain.once('token-prompt-submit', (_event, value: string) => {
+      cleanup()
+      resolve((value || '').trim() || null)
+    })
+    ipcMain.once('token-prompt-cancel', () => {
+      cleanup()
+      resolve(null)
+    })
+    promptWindow.on('closed', () => {
+      if (!resolved) {
+        resolved = true
+        resolve(null)
+      }
+    })
+  })
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 480,
@@ -252,52 +350,23 @@ async function initializeApp() {
       return
     }
 
-    // トークン入力ダイアログ（prompt機能がないので、シンプルなinput）
-    // 実際の実装ではBrowserWindowでHTMLフォームを表示するのがベター
-    const { response, checkboxChecked } = await dialog.showMessageBox({
-      type: 'info',
-      title: 'トークン入力',
-      message: 'クリップボードからトークンを貼り付けてください',
-      detail: `以下の手順で設定してください：
-
-1. 招待ページのトークンをコピー
-2. このダイアログの「OK」をクリック
-3. 自動的にクリップボードからトークンを読み取ります`,
-      buttons: ['OK（クリップボードから読み取り）', 'キャンセル'],
-      defaultId: 0,
-    })
-
-    if (response === 1) {
-      app.exit(0)
-      return
-    }
-
-    // クリップボードからトークンを読み取り
-    const { clipboard } = await import('electron')
-    const token = clipboard.readText().trim()
-
-    if (!token) {
-      dialog.showErrorBox('エラー', 'トークンがクリップボードにありません。\n招待ページからトークンをコピーしてください。')
-      app.exit(1)
-      return
-    }
-
     // APIから設定を取得
     const API_URL = 'https://ai-check-platform.vercel.app' // 本番URL
-    
-    dialog.showMessageBox({
-      type: 'info',
-      title: '設定取得中',
-      message: '設定を取得しています...',
-      buttons: [],
-    })
 
-    config = await fetchConfigFromApi(API_URL, token)
+    while (true) {
+      const token = await promptForToken()
+      if (!token) {
+        app.exit(0)
+        return
+      }
 
-    if (!config) {
-      dialog.showErrorBox('エラー', 'トークンが無効です。\n正しいトークンを入力してください。')
-      app.exit(1)
-      return
+      config = await fetchConfigFromApi(API_URL, token)
+
+      if (!config) {
+        dialog.showErrorBox('エラー', 'トークンが無効です。\n正しいトークンを入力してください。')
+        continue
+      }
+      break
     }
 
     // 設定を保存
@@ -344,36 +413,38 @@ async function initializeApp() {
     mainWindow?.webContents.send('recording-status', true)
   })
 
-  // 自動アップロードを設定（30分ごとにチェック、50枚以上で自動アップロード）
-  setInterval(async () => {
+  // 自動アップロード（50枚以上で送信）
+  const AUTO_UPLOAD_THRESHOLD = 50
+  const CHECK_INTERVAL_MS = 5 * 60 * 1000 // 5分ごとにチェック
+
+  const runAutoUploadCheck = async () => {
     if (!recorder || !config) return
-
     const stats = recorder.getStats()
-    const AUTO_UPLOAD_THRESHOLD = 50 // 50枚以上で自動アップロード
+    if (stats.totalScreenshots < AUTO_UPLOAD_THRESHOLD) return
 
-    if (stats.totalScreenshots >= AUTO_UPLOAD_THRESHOLD) {
-      console.log(`自動アップロード開始: ${stats.totalScreenshots}枚`)
+    console.log(`自動アップロード開始: ${stats.totalScreenshots}枚`)
+    try {
+      const uploader = new Uploader(config)
+      const data = recorder.exportData()
+      const result = await uploader.upload(data)
 
-      try {
-        const uploader = new Uploader(config)
-        const data = recorder.exportData()
-        const result = await uploader.upload(data)
-
-        if (result.success) {
-          console.log('自動アップロード成功')
-          // アップロード成功後、古いデータをクリア（新しいセッション開始）
-          recorder.stop()
-          recorder = new Recorder({
-            intervalMs: 60000,
-            dataDir: path.join(app.getPath('userData'), 'recordings'),
-          })
-          await recorder.start()
-        }
-      } catch (error) {
-        console.error('自動アップロード失敗:', error)
+      if (result.success) {
+        console.log('自動アップロード成功')
+        recorder.stop()
+        recorder = new Recorder({
+          intervalMs: 60000,
+          dataDir: path.join(app.getPath('userData'), 'recordings'),
+        })
+        await recorder.start()
       }
+    } catch (error) {
+      console.error('自動アップロード失敗:', error)
     }
-  }, 30 * 60 * 1000) // 30分ごとにチェック
+  }
+
+  setInterval(runAutoUploadCheck, CHECK_INTERVAL_MS)
+  // 起動後も1回すぐチェック（既に50枚以上溜まっている場合用）
+  setTimeout(runAutoUploadCheck, 60 * 1000) // 1分後に1回目
 
   // リモート停止チェック（5分ごと）
   setInterval(async () => {
