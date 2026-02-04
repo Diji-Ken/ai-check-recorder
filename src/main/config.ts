@@ -7,6 +7,7 @@ export interface Config {
   api_url: string
   subject_name: string
   project_name: string
+  support_contact?: string
   // 調査期間設定
   recording_start_date?: string // 調査開始日 (ISO8601)
   recording_end_date?: string // 調査終了日 (ISO8601) - この日時を過ぎると自動終了

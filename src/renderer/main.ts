@@ -1,6 +1,12 @@
 // 型定義
 interface ElectronAPI {
-  getConfig: () => Promise<{ token: string; api_url: string; subject_name: string; project_name: string } | null>
+  getConfig: () => Promise<{
+    token: string
+    api_url: string
+    subject_name: string
+    project_name: string
+    support_contact?: string
+  } | null>
   getRecordingStatus: () => Promise<boolean>
   getRecordingStats: () => Promise<{
     startTime: string
@@ -56,6 +62,7 @@ let stats: {
   totalActiveSeconds: number
   appSummary: Record<string, number>
 } | null = null
+let supportContact: string | null = null
 
 // 画面切り替え
 function showScreen(screenId: keyof typeof screens) {
@@ -200,13 +207,19 @@ async function uploadData() {
       throw new Error(result.error || '送信に失敗しました')
     }
   } catch (error) {
-    document.getElementById('error-message')!.textContent = String(error)
+    const contactMessage = supportContact
+      ? `\n\n担当者: ${supportContact}`
+      : '\n\n担当者にご連絡ください。'
+    document.getElementById('error-message')!.textContent = `${String(error)}${contactMessage}`
     showScreen('error')
   }
 }
 
 // 初期化
 async function init() {
+  const currentConfig = await window.electronAPI.getConfig()
+  supportContact = currentConfig?.support_contact?.trim() || null
+
   // イベントリスナーを設定
   window.electronAPI.onConfigLoaded((data) => {
     document.getElementById('project-name')!.textContent = data.projectName

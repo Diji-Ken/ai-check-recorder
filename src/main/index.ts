@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell } from 'electron'
+import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell, Notification } from 'electron'
 import { systemPreferences } from 'electron'
 
 // Dockにアイコンを表示しない（macOS）
@@ -88,6 +88,66 @@ let recorder: Recorder | null = null
 let config: Config | null = null
 
 const isDev = process.env.NODE_ENV === 'development'
+
+const FAILURE_NOTICE_THROTTLE_MS = 30 * 60 * 1000
+let lastFailureNoticeAt = 0
+
+function getSupportContactMessage(): string {
+  const contact = config?.support_contact?.trim()
+  if (!contact) {
+    return '担当者にご連絡ください。'
+  }
+  return `担当者: ${contact}`
+}
+
+function notifyUserFailure(message: string): void {
+  const now = Date.now()
+  if (now - lastFailureNoticeAt < FAILURE_NOTICE_THROTTLE_MS) return
+
+  lastFailureNoticeAt = now
+  const body = `${message}\n${getSupportContactMessage()}`
+
+  if (Notification.isSupported()) {
+    new Notification({
+      title: 'AI Check Recorder',
+      body,
+    }).show()
+    return
+  }
+
+  dialog.showErrorBox('送信に失敗しました', body)
+}
+
+async function notifyUploadFailure(params: {
+  source: 'auto' | 'manual'
+  error: string
+  screenshotsCount: number
+}) {
+  if (!config) return
+
+  try {
+    const fetch = (await import('node-fetch')).default
+    await fetch(`${config.api_url}/api/recorder/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Subject-Token': config.token,
+      },
+      body: JSON.stringify({
+        status: 'failed',
+        source: params.source,
+        error: params.error,
+        screenshots_count: params.screenshotsCount,
+        subject_name: config.subject_name,
+        project_name: config.project_name,
+        app_version: app.getVersion(),
+        device: process.platform === 'darwin' ? 'macOS' : 'Windows',
+      }),
+    })
+  } catch (error) {
+    console.error('Failed to notify admin:', error)
+  }
+}
 
 async function promptForToken(): Promise<string | null> {
   return await new Promise((resolve) => {
@@ -436,9 +496,22 @@ async function initializeApp() {
           dataDir: path.join(app.getPath('userData'), 'recordings'),
         })
         await recorder.start()
+      } else {
+        await notifyUploadFailure({
+          source: 'auto',
+          error: result.message,
+          screenshotsCount: stats.totalScreenshots,
+        })
+        notifyUserFailure('自動送信に失敗しました。')
       }
     } catch (error) {
       console.error('自動アップロード失敗:', error)
+      await notifyUploadFailure({
+        source: 'auto',
+        error: String(error),
+        screenshotsCount: stats.totalScreenshots,
+      })
+      notifyUserFailure('自動送信に失敗しました。')
     }
   }
 
@@ -559,8 +632,21 @@ ipcMain.handle('upload-data', async () => {
 
   try {
     const result = await uploader.upload(data)
+    if (!result.success) {
+      await notifyUploadFailure({
+        source: 'manual',
+        error: result.message,
+        screenshotsCount: data.stats.totalScreenshots,
+      })
+      return { success: false, error: result.message }
+    }
     return { success: true, result }
   } catch (error) {
+    await notifyUploadFailure({
+      source: 'manual',
+      error: String(error),
+      screenshotsCount: data.stats.totalScreenshots,
+    })
     return { success: false, error: String(error) }
   }
 })
