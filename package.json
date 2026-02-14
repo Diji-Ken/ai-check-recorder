@@ -1,6 +1,6 @@
 {
   "name": "ai-check-recorder",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "AI業務改善チェック PC記録ツール",
   "main": "dist/index.js",
   "scripts": {
@@ -64,21 +64,35 @@
     "mac": {
       "target": [
         {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
           "target": "zip",
           "arch": [
-            "x64",
             "arm64"
           ]
         }
       ],
       "icon": "assets/icon.icns",
       "category": "public.app-category.productivity",
+      "identity": "DIGITAL TOOL KENKYUJO, K.K. (76A77RY8QF)",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
+      "notarize": {
+        "teamId": "76A77RY8QF"
+      },
       "extendInfo": {
         "NSScreenCaptureUsageDescription": "業務改善のため、画面のスクリーンショットを記録します。",
         "NSAppleEventsUsageDescription": "アクティブなアプリケーション情報を取得するために使用します。"
       }
+    },
+    "dmg": {
+      "sign": false
     },
     "nsis": {
       "oneClick": true,

@@ -4,21 +4,14 @@
 set -e
 cd "$(dirname "$0")/.."
 REPO="${GITHUB_REPO:-Diji-Ken/ai-check-recorder}"
-VERSION="${1:-v$(node -p "require('./package.json').version")}"
-
-# electron-builder の GitHub 自動公開を抑止（ZIP はこのスクリプトでアップロードする）
-export CI=false
-
-echo "==> ビルド (Mac arm64, Windows)..."
-npm run build
-npm run dist:mac   # arm64 を優先で生成
-npm run dist:win
+PKG_VERSION="$(node -p "require('./package.json').version")"
+VERSION="${1:-v${PKG_VERSION}}"
 
 echo "==> アップロード用ファイル名にコピー..."
 RELEASE_DIR="release"
 cd "$RELEASE_DIR"
-MAC_SRC="AI Check Recorder-1.0.0-arm64-mac.zip"
-WIN_SRC="AI Check Recorder-1.0.0-win.zip"
+MAC_SRC="AI Check Recorder-${PKG_VERSION}-arm64-mac.zip"
+WIN_SRC="AI Check Recorder-${PKG_VERSION}-win.zip"
 
 if [ ! -f "$MAC_SRC" ]; then
   echo "エラー: $MAC_SRC が見つかりません。先に npm run dist:mac を実行してください。"
