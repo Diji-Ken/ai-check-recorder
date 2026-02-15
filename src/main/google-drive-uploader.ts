@@ -16,6 +16,15 @@ interface UploadResult {
 }
 
 /**
+ * Buffer を net.fetch 互換の Blob に変換
+ * (Electron の net.fetch は Node.js Buffer を直接受け付けない)
+ */
+function bufferToBlob(buf: Buffer, type: string): Blob {
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+  return new Blob([ab], { type })
+}
+
+/**
  * OAuth認証を使用したGoogle Driveアップローダー
  */
 export class GoogleDriveUploader {
@@ -118,7 +127,7 @@ export class GoogleDriveUploader {
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': `multipart/related; boundary=${boundary}`,
             },
-            body: multipartBody,
+            body: bufferToBlob(multipartBody, `multipart/related; boundary=${boundary}`),
           }
         )
 
@@ -165,7 +174,7 @@ export class GoogleDriveUploader {
             'Content-Length': String(fileSize),
             'Content-Type': 'application/zip',
           },
-          body: fileBuffer,
+          body: bufferToBlob(fileBuffer, 'application/zip'),
         })
 
         if (!uploadResponse.ok) {

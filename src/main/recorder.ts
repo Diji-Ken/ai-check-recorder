@@ -243,9 +243,6 @@ export class Recorder {
   getScreenshots(): ScreenshotRecord[] {
     return this.screenshots.map((s) => ({
       ...s,
-      // パスはファイル名のみ返す（セキュリティ）
-      filePath: path.basename(s.filePath),
-      thumbnailPath: path.basename(s.thumbnailPath),
     }))
   }
 
