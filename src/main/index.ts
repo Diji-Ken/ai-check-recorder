@@ -126,8 +126,8 @@ async function notifyUploadFailure(params: {
   if (!config) return
 
   try {
-    const fetch = (await import('node-fetch')).default
-    await fetch(`${config.api_url}/api/recorder/notify`, {
+    const { net } = await import('electron')
+    await net.fetch(`${config.api_url}/api/recorder/notify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -524,8 +524,8 @@ async function initializeApp() {
     if (!config) return
 
     try {
-      const fetch = (await import('node-fetch')).default
-      const response = await fetch(`${config.api_url}/api/recorder/status?token=${config.token}`)
+      const { net } = await import('electron')
+      const response = await net.fetch(`${config.api_url}/api/recorder/status?token=${config.token}`)
 
       if (response.ok) {
         const data = await response.json() as { should_stop?: boolean; message?: string }

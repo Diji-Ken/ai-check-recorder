@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
+import { net } from 'electron'
 import { Config } from './config'
 import { GoogleDriveUploader, createZipArchive } from './google-drive-uploader'
 
@@ -139,8 +140,7 @@ export class Uploader {
    */
   private async sendMetadataToApi(metadata: object): Promise<void> {
     try {
-      const fetch = (await import('node-fetch')).default
-      await fetch(`${this.config.api_url}/api/recorder/metadata`, {
+      await net.fetch(`${this.config.api_url}/api/recorder/metadata`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,31 +162,15 @@ export class Uploader {
     screenshots: UploadData['screenshots'],
     dataDir: string
   ): Promise<{ success: boolean; message: string }> {
-    const FormData = (await import('form-data')).default
-    const formData = new FormData()
-
-    formData.append('metadata', JSON.stringify(metadata), {
-      contentType: 'application/json',
-      filename: 'metadata.json',
-    })
-
-    for (const screenshot of screenshots) {
-      const fullPath = path.join(dataDir, 'screenshots', path.basename(screenshot.filePath))
-      if (fs.existsSync(fullPath)) {
-        formData.append('screenshots', fs.createReadStream(fullPath), {
-          filename: path.basename(screenshot.filePath),
-        })
-      }
-    }
-
-    const fetch = (await import('node-fetch')).default
-    const response = await fetch(`${this.config.api_url}/api/recorder/upload`, {
+    // フォールバック: Google Drive設定がない場合のAPI直接アップロード
+    // form-dataとnode-fetchはESM互換性の問題があるため、net.fetchでJSON送信に変更
+    const response = await net.fetch(`${this.config.api_url}/api/recorder/upload`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'X-Subject-Token': this.config.token,
-        ...formData.getHeaders(),
       },
-      body: formData,
+      body: JSON.stringify({ metadata }),
     })
 
     if (!response.ok) {

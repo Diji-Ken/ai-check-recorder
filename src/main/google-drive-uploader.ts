@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { net } from 'electron'
 
 interface OAuthConfig {
   client_id: string
@@ -39,9 +40,7 @@ export class GoogleDriveUploader {
       return this.accessToken
     }
 
-    const fetch = (await import('node-fetch')).default
-
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    const response = await net.fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -76,7 +75,6 @@ export class GoogleDriveUploader {
   ): Promise<UploadResult> {
     try {
       const accessToken = await this.getAccessToken()
-      const fetch = (await import('node-fetch')).default
 
       // プロジェクトフォルダを取得または作成
       const projectFolderId = await this.getOrCreateFolder(projectName, this.folderId, accessToken)
@@ -112,7 +110,7 @@ export class GoogleDriveUploader {
           Buffer.from(closeDelimiter),
         ])
 
-        const response = await fetch(
+        const response = await net.fetch(
           'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',
           {
             method: 'POST',
@@ -137,7 +135,7 @@ export class GoogleDriveUploader {
         }
       } else {
         // Resumable upload for large files
-        const initResponse = await fetch(
+        const initResponse = await net.fetch(
           'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
           {
             method: 'POST',
@@ -161,7 +159,7 @@ export class GoogleDriveUploader {
           throw new Error('No upload URL received')
         }
 
-        const uploadResponse = await fetch(uploadUrl, {
+        const uploadResponse = await net.fetch(uploadUrl, {
           method: 'PUT',
           headers: {
             'Content-Length': String(fileSize),
@@ -199,13 +197,11 @@ export class GoogleDriveUploader {
     parentId: string,
     accessToken: string
   ): Promise<string> {
-    const fetch = (await import('node-fetch')).default
-
     const query = encodeURIComponent(
       `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
     )
 
-    const searchResponse = await fetch(
+    const searchResponse = await net.fetch(
       `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name)`,
       {
         headers: {
@@ -225,7 +221,7 @@ export class GoogleDriveUploader {
     }
 
     // フォルダを作成
-    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
+    const createResponse = await net.fetch('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,

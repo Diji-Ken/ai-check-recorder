@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { app } from 'electron'
+import { net } from 'electron'
 
 export interface Config {
   token: string
@@ -78,8 +79,7 @@ export function deleteUserConfig(): void {
 // APIから設定を取得（トークンベース）
 export async function fetchConfigFromApi(apiUrl: string, token: string): Promise<Config | null> {
   try {
-    const fetch = (await import('node-fetch')).default
-    const response = await fetch(`${apiUrl}/api/invite/${token}/config`)
+    const response = await net.fetch(`${apiUrl}/api/invite/${token}/config`)
 
     if (!response.ok) {
       console.error('API error:', response.status)

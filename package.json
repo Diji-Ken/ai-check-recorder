@@ -1,6 +1,6 @@
 {
   "name": "ai-check-recorder",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "AI業務改善チェック PC記録ツール",
   "main": "dist/index.js",
   "scripts": {
