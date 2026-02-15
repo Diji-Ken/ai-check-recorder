@@ -1,6 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import * as crypto from 'crypto'
+import { nativeImage } from 'electron'
 
 // 動的インポート用の型
 type ScreenshotFn = (options?: { format?: 'jpg' | 'png' }) => Promise<Buffer>
@@ -186,8 +187,18 @@ export class Recorder {
       // フルサイズを保存
       fs.writeFileSync(filePath, imgBuffer)
 
-      // サムネイルは同じファイルをコピー（本来はリサイズすべきだが簡略化）
-      fs.writeFileSync(thumbnailPath, imgBuffer)
+      // サムネイルを320px幅にリサイズして保存
+      try {
+        const img = nativeImage.createFromBuffer(imgBuffer)
+        const size = img.getSize()
+        const thumbWidth = 320
+        const thumbHeight = Math.round(size.height * (thumbWidth / size.width))
+        const thumbnail = img.resize({ width: thumbWidth, height: thumbHeight, quality: 'good' })
+        fs.writeFileSync(thumbnailPath, thumbnail.toJPEG(60))
+      } catch {
+        // リサイズ失敗時はフルサイズをコピー
+        fs.writeFileSync(thumbnailPath, imgBuffer)
+      }
 
       // 記録を追加
       const record: ScreenshotRecord = {

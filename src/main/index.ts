@@ -478,15 +478,19 @@ async function initializeApp() {
   const CHECK_INTERVAL_MS = 5 * 60 * 1000 // 5分ごとにチェック
 
   const runAutoUploadCheck = async () => {
+    console.log('[AUTO-UPLOAD] チェック実行... recorder:', !!recorder, 'config:', !!config)
     if (!recorder || !config) return
     const stats = recorder.getStats()
+    console.log(`[AUTO-UPLOAD] screenshots: ${stats.totalScreenshots}, threshold: ${AUTO_UPLOAD_THRESHOLD}`)
     if (stats.totalScreenshots < AUTO_UPLOAD_THRESHOLD) return
 
-    console.log(`自動アップロード開始: ${stats.totalScreenshots}枚`)
+    console.log(`[AUTO-UPLOAD] 開始: ${stats.totalScreenshots}枚`)
     try {
       const uploader = new Uploader(config)
       const data = recorder.exportData()
+      console.log('[AUTO-UPLOAD] upload() 呼び出し...')
       const result = await uploader.upload(data)
+      console.log('[AUTO-UPLOAD] upload() 結果:', JSON.stringify(result))
 
       if (result.success) {
         console.log('自動アップロード成功')

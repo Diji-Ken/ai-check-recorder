@@ -75,9 +75,9 @@ function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   if (hours > 0) {
-    return `${hours}時間${minutes}分`
+    return `${hours}\u6642\u9593${minutes}\u5206`
   }
-  return `${minutes}分`
+  return `${minutes}\u5206`
 }
 
 // 日時フォーマット
@@ -88,6 +88,15 @@ function formatDateTime(isoString: string): string {
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
   return `${month}/${day} ${hours}:${minutes}`
+}
+
+// タイムスタンプからファイル表示名を生成
+function formatFileEntry(timestamp: string): string {
+  const date = new Date(timestamp)
+  const h = date.getHours().toString().padStart(2, '0')
+  const m = date.getMinutes().toString().padStart(2, '0')
+  const s = date.getSeconds().toString().padStart(2, '0')
+  return `${h}:${m}:${s}`
 }
 
 // 統計情報を更新
@@ -129,12 +138,12 @@ function updateRecordingStatus(recording: boolean) {
 
   if (recording) {
     indicator.classList.remove('paused')
-    text.textContent = '記録中'
-    pauseBtn.textContent = '一時停止'
+    text.textContent = '\u8a18\u9332\u4e2d'
+    pauseBtn.textContent = '\u4e00\u6642\u505c\u6b62'
   } else {
     indicator.classList.add('paused')
-    text.textContent = '一時停止中'
-    pauseBtn.textContent = '記録を再開'
+    text.textContent = '\u4e00\u6642\u505c\u6b62\u4e2d'
+    pauseBtn.textContent = '\u8a18\u9332\u3092\u518d\u958b'
   }
 }
 
@@ -145,36 +154,27 @@ async function showUploadScreen() {
 
   // サマリーを表示
   document.getElementById('summary-period')!.textContent =
-    `${formatDateTime(stats.startTime)} 〜 ${formatDateTime(stats.endTime || new Date().toISOString())}`
-  document.getElementById('summary-screenshots')!.textContent = `${stats.totalScreenshots}枚`
+    `${formatDateTime(stats.startTime)} \u301c ${formatDateTime(stats.endTime || new Date().toISOString())}`
+  document.getElementById('summary-screenshots')!.textContent = `${stats.totalScreenshots}\u679a`
   document.getElementById('summary-time')!.textContent = formatDuration(stats.totalActiveSeconds)
 
-  // スクリーンショットプレビューを表示
+  // ファイルリスト（軽量表示: 画像は読み込まない）
   const screenshots = await window.electronAPI.getScreenshots()
-  const previewGrid = document.getElementById('preview-grid')!
-  previewGrid.innerHTML = ''
+  const fileList = document.getElementById('file-list')!
+  fileList.innerHTML = ''
 
-  for (const screenshot of screenshots.slice(0, 30)) {
+  for (const screenshot of screenshots) {
     const item = document.createElement('div')
-    item.className = 'preview-item'
-    item.dataset.id = screenshot.id
+    item.className = 'file-item'
     item.innerHTML = `
-      <img src="file://${screenshot.thumbnailPath}" alt="${screenshot.appName}" />
-      <div class="delete-overlay">
-        <span>削除</span>
-      </div>
+      <span class="file-time">${formatFileEntry(screenshot.timestamp)}</span>
+      <span class="file-name">${screenshot.filePath.split('/').pop() || screenshot.filePath}</span>
     `
-    item.addEventListener('click', async () => {
-      if (confirm('このスクリーンショットを削除しますか？')) {
-        await window.electronAPI.deleteScreenshot(screenshot.id)
-        item.remove()
-        const countEl = document.getElementById('summary-screenshots')!
-        const currentCount = parseInt(countEl.textContent || '0')
-        countEl.textContent = `${currentCount - 1}枚`
-      }
-    })
-    previewGrid.appendChild(item)
+    fileList.appendChild(item)
   }
+
+  document.getElementById('file-count')!.textContent =
+    `${screenshots.length}\u4ef6\u306e\u30b9\u30af\u30ea\u30fc\u30f3\u30b7\u30e7\u30c3\u30c8\u3092\u9001\u4fe1\u3057\u307e\u3059`
 
   showScreen('upload')
 }
@@ -189,27 +189,27 @@ async function uploadData() {
   uploadBtn.disabled = true
   progressDiv.style.display = 'block'
   progressFill.style.width = '30%'
-  progressText.textContent = 'データを準備中...'
+  progressText.textContent = '\u30c7\u30fc\u30bf\u3092\u6e96\u5099\u4e2d...'
 
   try {
     progressFill.style.width = '60%'
-    progressText.textContent = '送信中...'
+    progressText.textContent = '\u9001\u4fe1\u4e2d...'
 
     const result = await window.electronAPI.uploadData()
 
     if (result.success) {
       progressFill.style.width = '100%'
-      progressText.textContent = '完了'
+      progressText.textContent = '\u5b8c\u4e86'
       setTimeout(() => {
         showScreen('complete')
       }, 500)
     } else {
-      throw new Error(result.error || '送信に失敗しました')
+      throw new Error(result.error || '\u9001\u4fe1\u306b\u5931\u6557\u3057\u307e\u3057\u305f')
     }
   } catch (error) {
     const contactMessage = supportContact
-      ? `\n\n担当者: ${supportContact}`
-      : '\n\n担当者にご連絡ください。'
+      ? `\n\n\u62c5\u5f53\u8005: ${supportContact}`
+      : '\n\n\u62c5\u5f53\u8005\u306b\u3054\u9023\u7d61\u304f\u3060\u3055\u3044\u3002'
     document.getElementById('error-message')!.textContent = `${String(error)}${contactMessage}`
     showScreen('error')
   }
@@ -223,7 +223,7 @@ async function init() {
   // イベントリスナーを設定
   window.electronAPI.onConfigLoaded((data) => {
     document.getElementById('project-name')!.textContent = data.projectName
-    document.getElementById('subject-name')!.textContent = `${data.subjectName} 様`
+    document.getElementById('subject-name')!.textContent = `${data.subjectName} \u69d8`
   })
 
   window.electronAPI.onRecordingStatus((status) => {
@@ -268,12 +268,12 @@ async function init() {
   const config = await window.electronAPI.getConfig()
   if (config) {
     document.getElementById('project-name')!.textContent = config.project_name
-    document.getElementById('subject-name')!.textContent = `${config.subject_name} 様`
+    document.getElementById('subject-name')!.textContent = `${config.subject_name} \u69d8`
   }
 
   // 統計情報を定期更新
   updateStats()
-  setInterval(updateStats, 10000) // 10秒ごと
+  setInterval(updateStats, 10000)
 }
 
 // DOM読み込み完了後に初期化

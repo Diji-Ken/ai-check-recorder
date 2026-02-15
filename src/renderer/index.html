@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
   <title>AI Check Recorder</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -74,10 +74,9 @@
         </div>
       </div>
 
-      <div class="upload-preview">
-        <h3>スクリーンショットプレビュー</h3>
-        <p class="preview-note">不要なスクリーンショットはクリックで削除できます</p>
-        <div class="preview-grid" id="preview-grid">
+      <div class="upload-file-list">
+        <p class="file-count" id="file-count"></p>
+        <div class="file-list" id="file-list">
           <!-- 動的に追加 -->
         </div>
       </div>
@@ -99,7 +98,7 @@
     <!-- 完了画面 -->
     <div id="complete-screen" class="screen">
       <div class="complete-content">
-        <div class="complete-icon">✓</div>
+        <div class="complete-icon">&#10003;</div>
         <h1>送信完了</h1>
         <p>ご協力ありがとうございました。</p>
         <p class="complete-note">このアプリは閉じていただいて構いません。</p>
